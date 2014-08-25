@@ -1,0 +1,12 @@
+task :start do
+	sh "bundle exec thin start -C thin.yml"
+end
+
+task :stop do
+	sh "bundle exec thin stop -C thin.yml"
+end
+
+task :debug do
+	sh "bundle exec ruby main.rb -p 8082"
+end
+
