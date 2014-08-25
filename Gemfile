@@ -1,7 +1,8 @@
 # A sample Gemfile
 source "https://rubygems.org"
 
-gem "twitter"
+gem 'dbd-mysql'
+gem 'dbi'
 gem 'json'
 gem 'thin'
 gem 'rack'

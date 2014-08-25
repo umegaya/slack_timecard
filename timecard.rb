@@ -3,14 +3,14 @@ require 'json'
 
 class Timecard
 	begin
-	    @@dbc = DBI.connect("dbi:Mysql:dokyogames:timecard", "root", "dokyogames")
-		@@dbc.do( "CREATE TABLE IF NOT EXISTS timecard(
+	    @@dbc = DBI.connect("dbi:Mysql:dokyogames:localhost", "root", "dokyogames")
+		@@dbc.do("CREATE TABLE IF NOT EXISTS timecard(
 			name CHAR(32) not null,
-			type CHAR(8) not null,
 			date CHAR(10) not null,
-			at DATETIME not null,
-			UNIQUE KEY (type, at)
-		) " )
+			start DATETIME not null,
+			end DATETIME not null,
+			UNIQUE(name, date)
+		)")
 		@@dbc.commit
 	rescue DBI::DatabaseError => e
 		puts "Error code:    #{e.err}"
@@ -29,6 +29,7 @@ class Timecard
 		def parse(request)
 			request.body.rewind
 			request.body.readlines.each do |r|
+				p r
 		        # token=uOQ8Pk741UAuxwUyvEdkQrzA
 				# team_id=T0001
 				# channel_id=C2147483705
@@ -54,19 +55,18 @@ class Timecard
 	end
 
 	def self.punch(request)
-		store(SlackMessage.new request)
+		self.store(SlackMessage.new request)
 	end
 
 	def self.store(record)
-		if @@dbc.select_one("SELECT FROM timecard WHERE type = 'in' and date = '#{record.date}'") then
+		if @@dbc.select_one("SELECT FROM timecard WHERE name = '#{record.user_name}' AND date = '#{record.date}'") then
 			# update 'out' record
-			@@dbc.do("UPDATE timecard SET at = '#{record.timeval}' WHERE type = 'in' and date = '#{record.date}'")
+			@@dbc.do("UPDATE timecard SET end = UNIX_TIMESTAMP(#{record.timeval}) WHERE name = '#{record.user_name}' AND date = '#{record.date}'")
 		else
 			# insert 'in' and 'out' records
-			@@dbc.do("INSERT INTO timecard VALUES
-				('#{record.name}', 'in', '#{record.date}', #{record.timeval}),
-				('#{record.name}', 'out', '#{record.date}', #{record.timeval})
-			")
+			@@dbc.do("INSERT INTO timecard VALUES('#{record.user_name}', '#{record.date}', 
+				UNIX_TIMESTAMP(#{record.timeval}), 
+				UNIX_TIMESTAMP(#{record.timeval}))")
 		end
 	rescue DBI::DatabaseError => e
 		puts "Error code:    #{e.err}"
