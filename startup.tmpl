@@ -1,0 +1,5 @@
+if [ ! -e #PWD#/tmp/pids/thin.#PORT#.pid ];
+then
+	/usr/bin/launch_rake #PWD# start
+fi
+
