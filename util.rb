@@ -46,9 +46,7 @@ module Util
 			dbc.disconnect			
 		end
 
-		module_function :connect
-		module_function :readone
-		module_function :write
+		module_function :connect, :readone, :write, :tr
 	end
 
 	class SlackMessage
@@ -63,7 +61,10 @@ module Util
 		end
 		def parse(request)
 			request.body.rewind
-			request.body.read.split('&').each do |r|
+			do_parse request.body.read
+		end
+		def do_parse(data)
+			data.split('&').each do |r|
 				# p r
 		        # token=uOQ8Pk741UAuxwUyvEdkQrzA
 				# team_id=T0001

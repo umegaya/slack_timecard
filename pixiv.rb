@@ -5,33 +5,34 @@ require 'csv'
 
 class Pixiv
 	class SearchResponse < CSV
+		TAGS = [
+			"user_id","user_id2", "extension","title","server_no",
+			"user_name","illust_128_url","x1","x2","illust_480mw_url",
+			"x3","x4","illust_entry_dt","tags","tool_name",
+			"evaluate_cnt","evaluate_sum","view_cnt","caption","page_cnt",
+			"x5","x6","x7","x8","user_disp_id",
+			"x9","r18_flg","x10","x11","user_url"]
 		def initialize(str)
-			@tag = ["user_id","extension","title","server_no","user_name","illust_128_url",
-				"x1","x2","illust_480mw_url","x3","x4","illust_entry_dt","tags","tool_name",
-				"evaluate_cnt","evaluate_sum","view_cnt","caption","page_cnt","x5","x6","x7","x8",
-				"user_disp_id","x9","r18_flg","x10","x11","user_url"]
-			@records = []
-			CSV.parse str do |row|
-				if not @tags then
-					@tags = row
-				else
-					row >> @records
-				end
-			end
+			@records = CSV.parse str
 		end
 		def [] (idx, key)
+			# p "[](#{idx}, #{key}), #{key2idx key}"
+			# p @records[idx]
 			@records[idx][key2idx key]
 		end
-		def get_random_image
-			self[rand(count), "illust_480mw_url"]
+		def random_image_message
+			cnt = rand(count)
+			caption = self.[](cnt, "caption")
+			"#{caption}\n#{self.[](cnt, "illust_480mw_url")}".force_encoding("UTF-8")
 		end
 		def count
 			@records.length
 		end
 		def key2idx(key)
-			@tags.each_with_index do |e, i|
+			TAGS.each_with_index do |e, i|
 				return i if e == key
 			end
+			raise "illust not found"
 			nil
 		end
 	end
@@ -39,10 +40,12 @@ class Pixiv
 		"http://spapi.pixiv.net/iphone/search.php?&s_mode=s_tag&word=#{URI.encode(word)}&order=date&PHPSESSID=0&p=1"
 	end
 	def self.search(word)
-		SearchResponse.new `curl -fsSL #{Pixiv.search_url word}`
+		out = `curl -fsSL \"#{Pixiv.search_url word}\"`
+		SearchResponse.new out
 	end
 	def self.fetch(request)
 		msg = Util::SlackMessage.new request
+		# msg.do_parse "channel_name=lua-products&command=/hoge"
 		# fetch one url of pixiv
 		if msg.command =~ /\/pixiv\s+(.*)/ then
 			pics = Pixiv.search URI.decode($1)
@@ -50,6 +53,6 @@ class Pixiv
 			pics = Pixiv.search "あやかし陰陽"
 		end
 		# store it to queue
-		MsgQ::push("##{msg.channel_name}", pics.get_random_image, "")
+		MsgQ.push("##{msg.channel_name}", pics.random_image_message)
 	end
 end
